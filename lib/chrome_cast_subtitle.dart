@@ -54,22 +54,16 @@ class ChromeCastSubtitle {
 
   String toJson() => json.encode(toMap());
 
-  factory ChromeCastSubtitle.fromJson(String source) =>
-      ChromeCastSubtitle.fromMap(json.decode(source) as Map<String, dynamic>);
+  factory ChromeCastSubtitle.fromJson(String source) => ChromeCastSubtitle.fromMap(json.decode(source) as Map<String, dynamic>);
 
   @override
-  String toString() {
-    return 'ChromeCastSubtitle(id: $id, name: $name, source: $source, language: $language)';
-  }
+  String toString() => 'ChromeCastSubtitle(id: $id, name: $name, source: $source, language: $language)';
 
   @override
   bool operator ==(covariant ChromeCastSubtitle other) {
     if (identical(this, other)) return true;
 
-    return other.id == id &&
-        other.name == name &&
-        other.source == source &&
-        other.language == language;
+    return other.id == id && other.name == name && other.source == source && other.language == language;
   }
 
   @override

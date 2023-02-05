@@ -4,39 +4,35 @@ part of video_cast;
 ///
 /// Pass to [ChromeCastButton.onButtonCreated] to receive a [ChromeCastController]
 /// when the button is created.
-typedef void OnButtonCreated(ChromeCastController controller);
+typedef OnButtonCreated = void Function(ChromeCastController controller);
 
 /// Callback method for when a request has failed.
-typedef void OnRequestFailed(String? error);
+typedef OnRequestFailed = void Function(String? error);
 
 ///Callback when a cast session is starting to end.
-typedef void OnSessionEnding(int? position);
+typedef OnSessionEnding = void Function(int? position);
 
 /// Widget that displays the ChromeCast button.
-class ChromeCastButton extends StatelessWidget {
+class ChromeCastButton extends StatefulWidget {
   /// Creates a widget displaying a ChromeCast button.
   ChromeCastButton({
     Key? key,
-    this.size = 30.0,
-    this.color = Colors.black,
+    this.size,
+    this.color,
     this.onButtonCreated,
     this.onSessionStarted,
     this.onSessionEnded,
     this.onRequestCompleted,
     this.onRequestFailed,
     this.onSessionEnding,
-  })  : assert(
-            defaultTargetPlatform == TargetPlatform.iOS ||
-                defaultTargetPlatform == TargetPlatform.android,
+  })  : assert(defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android,
             '$defaultTargetPlatform is not supported by this plugin'),
         super(key: key);
 
   /// The size of the button.
-  final double size;
+  final double? size;
 
-  /// The color of the button.
-  /// This is only supported on iOS at the moment.
-  final Color color;
+  final Color? color;
 
   /// Callback method for when the button is ready to be used.
   ///
@@ -59,49 +55,63 @@ class ChromeCastButton extends StatelessWidget {
   final OnSessionEnding? onSessionEnding;
 
   @override
+  State<ChromeCastButton> createState() => _ChromeCastButtonState();
+}
+
+class _ChromeCastButtonState extends State<ChromeCastButton> {
+  StreamSubscription<SessionStartedEvent>? _subscriptionSessionStarted;
+  StreamSubscription<SessionEndedEvent>? _subscriptionSessionEnded;
+  StreamSubscription<RequestDidCompleteEvent>? _subscriptionRequestCompleted;
+  StreamSubscription<RequestDidFailEvent>? _subscriptionRequestFailed;
+  StreamSubscription<SessionEndingEvent>? _subscriptionSessionEnding;
+
+  @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
     final Map<String, dynamic> args = {
-      'red': color.red,
-      'green': color.green,
-      'blue': color.blue,
-      'alpha': color.alpha
+      'red': widget.color?.red ?? colorScheme.primary.red,
+      'green': widget.color?.green ?? colorScheme.primary.green,
+      'blue': widget.color?.blue ?? colorScheme.primary.blue,
+      'alpha': widget.color?.alpha ?? colorScheme.primary.alpha,
     };
+
     return SizedBox(
-      width: size,
-      height: size,
+      width: theme.iconTheme.size ?? widget.size,
+      height: theme.iconTheme.size ?? widget.size,
       child: _chromeCastPlatform.buildView(args, _onPlatformViewCreated),
     );
   }
 
   Future<void> _onPlatformViewCreated(int id) async {
     final ChromeCastController controller = await ChromeCastController.init(id);
-    if (onButtonCreated != null) {
-      onButtonCreated!(controller);
+    if (widget.onButtonCreated != null) {
+      widget.onButtonCreated?.call(controller);
     }
-    if (onSessionStarted != null) {
-      _chromeCastPlatform
-          .onSessionStarted(id: id)
-          .listen((_) => onSessionStarted!());
+    if (widget.onSessionStarted != null) {
+      _subscriptionSessionStarted = _chromeCastPlatform.onSessionStarted(id: id).listen((_) => widget.onSessionStarted?.call());
     }
-    if (onSessionEnded != null) {
-      _chromeCastPlatform
-          .onSessionEnded(id: id)
-          .listen((_) => onSessionEnded!());
+    if (widget.onSessionEnded != null) {
+      _subscriptionSessionEnded = _chromeCastPlatform.onSessionEnded(id: id).listen((_) => widget.onSessionEnded?.call());
     }
-    if (onRequestCompleted != null) {
-      _chromeCastPlatform
-          .onRequestCompleted(id: id)
-          .listen((_) => onRequestCompleted!());
+    if (widget.onRequestCompleted != null) {
+      _subscriptionRequestCompleted = _chromeCastPlatform.onRequestCompleted(id: id).listen((_) => widget.onRequestCompleted?.call());
     }
-    if (onRequestFailed != null) {
-      _chromeCastPlatform
-          .onRequestFailed(id: id)
-          .listen((event) => onRequestFailed!(event.error));
+    if (widget.onRequestFailed != null) {
+      _subscriptionRequestFailed = _chromeCastPlatform.onRequestFailed(id: id).listen((event) => widget.onRequestFailed?.call(event.error));
     }
-    if (onSessionEnding != null) {
-      _chromeCastPlatform
-          .onSessionEnding(id: id)
-          .listen((event) => onSessionEnding!(event.lastPosition));
+    if (widget.onSessionEnding != null) {
+      _subscriptionSessionEnding = _chromeCastPlatform.onSessionEnding(id: id).listen((event) => widget.onSessionEnding?.call(event.lastPosition));
     }
+  }
+
+  @override
+  void dispose() {
+    _subscriptionSessionStarted?.cancel();
+    _subscriptionSessionEnded?.cancel();
+    _subscriptionRequestCompleted?.cancel();
+    _subscriptionRequestFailed?.cancel();
+    _subscriptionSessionEnding?.cancel();
+    super.dispose();
   }
 }
